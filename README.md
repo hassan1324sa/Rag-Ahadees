@@ -6,9 +6,9 @@ Rag-Ahadees is a project dedicated to \[briefly describe the purpose, e.g., coll
 
 ## Features
 
-- **Feature 1**: \[Describe a key feature, e.g., "A comprehensive collection of Ahadees with references to authentic sources."\]
-- **Feature 2**: \[Describe another feature, e.g., "Search functionality to find narrations by topic, narrator, or keyword."\]
-- **Feature 3**: \[Add more features as relevant, e.g., "Multilingual support for translations in various languages."\]
+- **Feature 1**: \["A comprehensive collection of Ahadees with references to authentic sources."\]
+- **Feature 2**: \["Search functionality to find narrations by topic, narrator, or keyword."\]
+- **Feature 3**: \[ "Multilingual support for translations in various languages."\]
 
 ## Installation
 
