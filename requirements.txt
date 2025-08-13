@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+langchain
+langchain-community
+langchain-cohere
+faiss-cpu
+transformers
+sentence-transformers
+pandas
+sqlalchemy
+python-dotenv
