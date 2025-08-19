@@ -1,22 +1,24 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain.text_splitter import TokenTextSplitter
-from langchain.llms import Cohere
-from langchain.document_loaders import DataFrameLoader
-from langchain.vectorstores import Chroma
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_cohere import ChatCohere
+from langchain_community.vectorstores import Chroma
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
+from langchain.prompts import PromptTemplate
 from sqlalchemy import create_engine, Column, Integer, Text
 from sqlalchemy.orm import declarative_base, sessionmaker
-import pandas as pd
 import os
 from dotenv import load_dotenv
 
+# FastAPI App
+app = FastAPI(
+    title="Hadith RAG API with Memory",
+    description="Ask Hadith questions with chat memory",
+    version="1.0"
+)
 
-app = FastAPI(title="Hadith RAG API with Memory", description="Ask Hadith questions with chat memory", version="1.0")
-
-
+# Database Setup
 DATABASE_URL = "sqlite:///./requests.db"
 engine = create_engine(DATABASE_URL)
 Base = declarative_base()
@@ -30,52 +32,60 @@ class RequestLog(Base):
 
 Base.metadata.create_all(bind=engine)
 
-
-load_dotenv("app.env") 
-
+# Load API keys
+load_dotenv("app.env")
 cohereApi = os.getenv('COHERE_API')
-llm = Cohere(cohere_api_key=cohereApi, model="command-r-plus")
+googleApi = os.getenv('GOOGLE_API_KEY')
 
+# LLM (Cohere)
+llm = ChatCohere(cohere_api_key=cohereApi, model="command-r-plus")
 
-df = pd.read_csv("hf://datasets/Ahmedhany216/Islamic-Books/my_dataframe.csv")
-df.drop_duplicates(subset=["hadith"], inplace=True)
-llmLoader = DataFrameLoader(df, page_content_column="hadith")
-llmData = llmLoader.load()
+# Embeddings (Gemini)
+model_em = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=googleApi)
 
-text_splitter = TokenTextSplitter(
-    encoding_name="cl100k_base",
-    chunk_size=800,
-    chunk_overlap=100
-)
-tokens_chunks = text_splitter.create_documents(
-    [i.page_content for i in llmData],
-    metadatas=[i.metadata for i in llmData]
-)
-
-model_em = HuggingFaceEmbeddings(model_name="intfloat/multilingual-e5-large")
+# Vector DB 
 saveToDir = "./chroma_db"
-docs_ids = [str(i) for i in range(len(tokens_chunks))]
-vector_db = Chroma.from_documents(tokens_chunks, model_em, persist_directory=saveToDir, ids=docs_ids)
+vector_db = Chroma(persist_directory=saveToDir, embedding_function=model_em)
 
+# Prompt Template
+prompt_template = """
+أنت مساعد ذكي مدرّب على الأحاديث.
+جاوب على السؤال التالي فقط من الأحاديث المتاحة.
+لو لقيت إجابة، ارجع الإجابة ثم أضف في الآخر "(استنادًا إلى الحديث)" مع ذكر المصدر لو موجود.
+لو ملقيتش أي إجابة قول "لا يوجد إجابة".
 
+السؤال: {question}
+المحادثة السابقة: {chat_history}
+المصادر: {context}
+
+الإجابة:
+"""
+
+QA_PROMPT = PromptTemplate(
+    input_variables=["question", "chat_history", "context"],
+    template=prompt_template,
+)
+
+# Conversational RAG Chain
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 qa_chain = ConversationalRetrievalChain.from_llm(
     llm=llm,
     retriever=vector_db.as_retriever(),
-    memory=memory
+    memory=memory,
+    combine_docs_chain_kwargs={"prompt": QA_PROMPT}
 )
 
-
+# Request Schema
 class Query(BaseModel):
     question: str
 
-
+# API Endpoints
 @app.post("/ask")
 def ask_question(query: Query):
     result = qa_chain({"question": query.question})
     answer = result["answer"]
 
-    # حفظ السؤال والإجابة في قاعدة البيانات
+    # Save to DB
     db_session = SessionLocal()
     log = RequestLog(question=query.question, answer=answer)
     db_session.add(log)
