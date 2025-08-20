@@ -11,6 +11,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 import os
 from dotenv import load_dotenv
 
+
 # FastAPI App
 app = FastAPI(
     title="Hadith RAG API with Memory",
@@ -24,16 +25,19 @@ engine = create_engine(DATABASE_URL)
 Base = declarative_base()
 SessionLocal = sessionmaker(bind=engine)
 
+
 class RequestLog(Base):
     __tablename__ = "requests"
     id = Column(Integer, primary_key=True, index=True)
     question = Column(Text)
     answer = Column(Text)
 
+
 Base.metadata.create_all(bind=engine)
 
 # Load API keys
 load_dotenv("app.env")
+
 cohereApi = os.getenv('COHERE_API')
 googleApi = os.getenv('GOOGLE_API_KEY')
 
@@ -41,9 +45,12 @@ googleApi = os.getenv('GOOGLE_API_KEY')
 llm = ChatCohere(cohere_api_key=cohereApi, model="command-r-plus")
 
 # Embeddings (Gemini)
-model_em = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=googleApi)
+model_em = GoogleGenerativeAIEmbeddings(
+    model="models/embedding-001",
+    google_api_key=googleApi
+)
 
-# Vector DB 
+# Vector DB (load only - no rebuilding)
 saveToDir = "./chroma_db"
 vector_db = Chroma(persist_directory=saveToDir, embedding_function=model_em)
 
@@ -75,9 +82,11 @@ qa_chain = ConversationalRetrievalChain.from_llm(
     combine_docs_chain_kwargs={"prompt": QA_PROMPT}
 )
 
+
 # Request Schema
 class Query(BaseModel):
     question: str
+
 
 # API Endpoints
 @app.post("/ask")
@@ -93,6 +102,7 @@ def ask_question(query: Query):
     db_session.close()
 
     return {"answer": answer, "chat_history": [str(m) for m in memory.chat_memory.messages]}
+
 
 @app.get("/")
 def root():
