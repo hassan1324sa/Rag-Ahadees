@@ -303,7 +303,6 @@
             // API endpoint
             const API_URL = "https://hassan123123-ahadeesrag.hf.space/ask";
             
-            // إضافة رسالة إلى الدردشة
             function addMessage(sender, text) {
                 const messageDiv = document.createElement('div');
                 messageDiv.classList.add('message');
@@ -314,21 +313,17 @@
                 chatContainer.scrollTop = chatContainer.scrollHeight;
             }
             
-            // عرض مؤشر الكتابة
             function showTypingIndicator() {
                 typingIndicator.style.display = 'block';
                 chatContainer.scrollTop = chatContainer.scrollHeight;
             }
             
-            // إخفاء مؤشر الكتابة
             function hideTypingIndicator() {
                 typingIndicator.style.display = 'none';
             }
             
-            // إرسال رسالة إلى API
-            async function sendMessageToAPI(message) {
+                        async function sendMessageToAPI(message) {
                 try {
-                    // إضافة timestamp لمنع مشاكل Caching
                     const timestamp = new Date().getTime();
                     const url = `${API_URL}?t=${timestamp}`;
                     
@@ -356,7 +351,6 @@
                 } catch (error) {
                     console.error('Error details:', error);
                     
-                    // إظهار رسالة خطأ أكثر تفصيلاً للمستخدم
                     if (error.message.includes('Failed to fetch')) {
                         return "⚠️ تعذر الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.";
                     } else if (error.message.includes('خطأ في الخادم')) {
@@ -367,33 +361,25 @@
                 }
             }
             
-            // إرسال رسالة
             async function sendMessage() {
                 const message = messageInput.value.trim();
                 
                 if (!message) return;
                 
-                // إضافة رسالة المستخدم
                 addMessage('user', message);
                 messageInput.value = '';
                 
-                // عرض مؤشر الكتابة
                 showTypingIndicator();
                 
                 try {
-                    // إرسال الرسالة إلى API والحصول على الرد
                     const response = await sendMessageToAPI(message);
                     
-                    // إخفاء مؤشر الكتابة
                     hideTypingIndicator();
                     
-                    // إضافة رد البوت
                     addMessage('bot', response);
                 } catch (error) {
-                    // إخفاء مؤشر الكتابة
                     hideTypingIndicator();
                     
-                    // إضافة رسالة الخطأ
                     addMessage('bot', "⚠️ عذرًا، حدث خطأ في المعالجة. يرجى المحاولة مرة أخرى.");
                 }
             }
